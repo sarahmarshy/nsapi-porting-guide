@@ -170,18 +170,83 @@ Looking through them, the most appropriate seems to be ` NSAPI_ERROR_DEVICE_ERRO
 
 We implemented similar methods to `startup` in ESP8266 to send AT commands 3-5. Then we used them to determine the success of the `connect()` method. The completed implementation can be found [here](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266Interface.cpp#L47-L68).  
 
+### Implementing `socket_open`
+
+The `NetworkStack` parent class dictates that we implement the functionality of opening a socket. This is the method signature in our interface:
+
+```C++
+int ESP8266Interface::socket_open(void **handle, nsapi_protocol_t proto)
+```
+
+This is an interesting method, as it doesn't necessitate any AT commands. The purpose is to create a socket in software and store the information in the `handle` parameter for use in other socket operations.
+
+The ESP8266 module can only handle 5 open sockets, so we want to ensure that we don't open a socket when there are none available. In our header file, we use this macro for convenience: `#define ESP8266_SOCKET_COUNT 5`. We are going to use a private class variable array to keep track of open sockets `bool _ids[ESP8266_SOCKET_COUNT]`. Our first order of business in `socket_open` is to iterate over `_ids` and look for an element in the array whose value is `false`.
+
+So far, our method looks like this:
+```C++
+int ESP8266Interface::socket_open(void **handle, nsapi_protocol_t proto)
+{
+    // Look for an unused socket
+    int id = -1;
+ 
+    for (int i = 0; i < ESP8266_SOCKET_COUNT; i++) {
+        if (!_ids[i]) {
+            id = i;
+            _ids[i] = true;
+            break;
+        }
+    }
+ 
+    if (id == -1) {
+        return NSAPI_ERROR_NO_SOCKET;
+    }
+
+    ...
+```
+
+After we've determined that we have an open socket, we want to store some information in the `handle` parameter. We've created a `struct` to store information about the socket that will be necessary for network operations. This is it:
+```C++
+struct esp8266_socket {
+    int id; // Socket ID number 
+    nsapi_protocol_t proto; // TCP or UDP
+    bool connected; // Is it connected to a server?
+    SocketAddress addr; // The address that it is connected to
+};
+```
+
+So, let's create one of these, store some information in it, then point the `handle` at it:
+
+```C++
+int ESP8266Interface::socket_open(void **handle, nsapi_protocol_t proto)
+{
+    ...
+    struct esp8266_socket *socket = new struct esp8266_socket;
+    if (!socket) {
+        return NSAPI_ERROR_NO_SOCKET;
+    }
+    
+    socket->id = id; // store the open ID we found above
+    socket->proto = proto; // TCP or UDP as specified in parameter
+    socket->connected = false; // default state not connected
+
+    *handle = socket;
+    return 0; // success
+```
+
+See the full implementation [here](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266Interface.cpp#L137-L164).
+
 
 ### Implementing `socket_connect`
 
-The `NetworkStack` parent class dictates that we implement the functionality of connecting a socket to a remote server. This is the method signature:
+The `NetworkStack` parent class dictates that we implement the functionality of connecting a socket to a remote server. This is the method signature in our interface:
 
 ```C++
- nsapi_error_t socket_connect(nsapi_socket_t handle, const SocketAddress &address)
+int ESP8266Interface::socket_connect(void *handle, const SocketAddress &addr)
 ```
 
-The `nsapi_socket_t` type is an opaque handle for network sockets. In this case, the handle will be one that has been assigned in the [`socket_open`](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266Interface.cpp#L137-L164) method. 
+In this case, the handle will be one that has been assigned in the [`socket_open`](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266Interface.cpp#L137-L164) method. 
 
-We've created an [`esp8266_socket struct`](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266Interface.cpp#L130-L135) to hold the necessary socket information. As `nsapi_socket_t` is an opaque `typedef`, we can cast it to `esp8266_socket`.  We do this in the body of `socket_connect`: 
+We can cast the void pointer to an `esp8266_socket` pointer.  We do this in the body of `socket_connect`: 
 
 ```C++
 int ESP8266Interface::socket_connect(void *handle, const SocketAddress &addr)
@@ -205,7 +270,7 @@ Focusing on this line:
 
 We access the socket ID and socket protocol from the members of `esp8266_socket`. We access the IP address and port of the server with the `SocketAddress addr` parameter. 
 
-This line will send the AT command for opening a socket to the WiFi module. 
+This method will send the AT command for opening a socket to the WiFi module and is defined as follows:
 
 ```C++
 bool ESP8266::open(const char *type, int id, const char* addr, int port)
@@ -221,6 +286,54 @@ bool ESP8266::open(const char *type, int id, const char* addr, int port)
 ```
 
 In this instance, we use the AT command parser to send `AT+CIPSTART=[id],[TCP or UDP], [address]` to the module. We expect to receive a response of `OK`. We only return true if we succesfully send the command AND receive an `OK` response. 
+
+### Implementing `socket_attach`
+
+The `NetworkStack` parent class dictates that we implement the functionality of registering a callback on state change of the socket. This is the method signature in our interface:
+
+```C++
+void ESP8266Interface::socket_attach(void *handle, void (*callback)(void *), void *data)
+```
+
+The specified callback will be called on state changes, like when the socket can recv/send/accept successfully.
+
+So, we know that ESP8266 can have up to 5 open sockets. We will need to keep track of all their callbacks. We have [created a struct](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266Interface.h#L269-L272) to hold the callback as well as the data of these callbacks. It is stored as a private class variable `_cbs`:
+```C++
+struct {
+    void (*callback)(void *);
+    void *data;
+} _cbs[ESP8266_SOCKET_COUNT];
+```
+
+The attach method is simple: 
+
+```C++
+void ESP8266Interface::socket_attach(void *handle, void (*callback)(void *), void *data)
+{
+    struct esp8266_socket *socket = (struct esp8266_socket *)handle;    
+    _cbs[socket->id].callback = callback;
+    _cbs[socket->id].data = data;
+}
+```
+
+So, we store the information in our `_cbs` struct for use on state changes. This is the tricky part. When should these callbacks be called? We've defined a method: `event()` to call our socket callbacks. It looks like this: 
+```C++
+void ESP8266Interface::event() {
+    for (int i = 0; i < ESP8266_SOCKET_COUNT; i++) {
+        if (_cbs[i].callback) {
+            _cbs[i].callback(_cbs[i].data);
+        }
+    }
+}
+```
+
+So, we look for sockets that have callbacks, then we call them with the specified data! 
+
+However, when should these events be triggered? We've used the `ESP8266` class object, `_esp` to attach a callback on a Serial RX event like so: `_esp.attach(this, &ESP8266Interface::event)`. Stepping into `_esp`'s attach function, we have: ` _serial.attach(func)`. Which attaches the a function to the underlying `BufferedSerial` RX event. So, whenever the radio receives something, we consider that a state change, and invoke any attach callbacks. A common use case is to attach `socket_recv` to a socket, so that the socket can receive data asynchronously without blocking.
+
+
+
+
 
 
 
