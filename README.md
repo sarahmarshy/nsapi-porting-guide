@@ -1,6 +1,6 @@
 # Creating an mbed-os compatible communication API
 
-The network-socket API provides a common interface for using sockets on network devices. It’s a class-based interface, which should be familiar to users experienced with other socket APIs.
+The Network-Socket-API (NSAPI)  provides a TCP/UDP API on top of any IP based network interface. The NSAPI makes it easy to write applications and libraries that use TCP/UDP Sockets without regard to the type of IP connectivity. In addition to providing the TCP/UDP API, the NSAPI also includes virtual base classes for the different IP interface types.
 
 ## Class heirarchy 
 
@@ -13,16 +13,16 @@ The current NetworkInterface subclasses are [CellularInterface](https://docs.mbe
 ![Class](/img/esp-class.png)
 
 There are three [pure virtual methods](https://en.wikipedia.org/wiki/Virtual_function#Abstract_classes_and_pure_virtual_functions) in the NetworkInterface class. 
-* [`connect`](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkInterface.h#L99) - to connect the interface to the network
-* [`disconnect`](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkInterface.h#L105) - to disconnect the interface from the network
-* [`get_stack`](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkInterface.h#L144) - to return the underlying NetworkStack object 
+* [`connect()`](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkInterface.h#L99) - to connect the interface to the network
+* [`disconnect()`](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkInterface.h#L105) - to disconnect the interface from the network
+* [`get_stack()`](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkInterface.h#L144) - to return the underlying NetworkStack object 
 
 Each subclass has distinct pure virtual methods. Visit their class references (linked above) to determine those that must be implemented.
 
 
 ### NetworkStack class
 
-`NetworkStack` provides a common interface that is shared between hardware that can connect to a network over IP. By implementing the NetworkStack, a network stack can be used as a target for instantiating network sockets.
+`NetworkStack` provides a common interface that is shared between hardware that can connect to a network over IP. By implementing the NetworkStack, a class can be used as a target for instantiating network sockets.
 
 NetworkStack requires that you implement the following functionalities:
 * [getting an IP address from the network](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkStack.h#L45)
@@ -38,7 +38,7 @@ NetworkStack requires that you implement the following functionalities:
 
 ### The `connect()` method
 
-High level API calls to an implementation of a network-socket API are intended to be the **identical** across networking protocols. The only intended difference is the method used to connect to the network. For example, a Wifi connection requires and SSID and password, while an Ethernet connetion does not. This homogeneity allows the user to change out the connectivity of their app simply by changing the API call for connecting to the network. 
+High level API calls to an implementation of a network-socket API are intended to be the **identical** across networking protocols. The only intended difference is the method used to connect to the network. For example, a Wifi connection requires and SSID and password, a Cellular connection requires an APN, while Ethernet doesn't require any credentials. These differences are reflected only in the `connect` method syntax of the derived classes. The intended design allows the user to change out the connectivity of their app simply by adding a new library and changing the API call for connecting to the network. 
 
 Let's demonstrate with the code used to send an HTTP request over ethernet: 
 
@@ -82,83 +82,94 @@ To:
 ```
 
 
+## Case Study: ESP8266 Wifi component
 
-## Implementation Details of a WiFiInterface
+Let's look at how we ported a driver for the ESP8266 WiFi module to the NSAPI.
 
-We will use the `ESP8266Interface` as a case study for implementing a communication interface.
+### Required methods
 
-### The constructor
+We know that ESP8266 is a WiFi component, so we choose [`WiFiInterface`](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/WiFiInterface.h) as our `NetworkworkInterface` parent class. 
 
-[The defintion](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266Interface.h#L37): 
-`ESP8266Interface(PinName tx, PinName rx, bool debug = false);`
+`WiFiInterface` defines the following pure virtual functions: 
+1. `set_credentials(const char *ssid, const char *pass, nsapi_security_t security)`
+2. `set_channel(uint8_t channel)`
+3. `get_rssi()`
+4. `connect(const char *ssid, const char *pass, nsapi_security_t security, uint8_t channel)`
+5. `connect()`
+6. `disconnect()`
+7. `scan(WiFiAccessPoint *res, nsapi_size_t count)`
 
-ESP8266 WiFi module communicates with the device MCU using a serial connection. The MCU will send [AT commands](https://en.wikipedia.org/wiki/Hayes_command_set) over this connection. We pass in the pins the MCU will use to communicate with the WiFi chip. 
+Additionally, `WiFiInterface` parent class `NetworkInterface` introduces `NetworkStack *get_stack()` as a pure virtual function. 
 
-### Communicating with the WiFi module
-
-We've created an [AT command parser](https://github.com/ARMmbed/ATParser) to easily send AT commands and parse their responses. The AT command parser operates with a `BufferedSerial` object that provides software buffers and interrupt driven TX and RX for Serial. 
-
-`ESP8266Interface` utilizes an underlying interface called [`ESP8266`](https://github.com/ARMmbed/esp8266-driver/tree/master/ESP8266) to handle the communication with the WiFi modem. `ESP8266` maintains an instance of AT command parser to handle communcation with the module.
+We must also use [`NetworkStack`](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkStack.h) as a parent class of our interface. We've already explored the pure virtual methods [here](#NetworkStack-class).
 
 ### Implementing `connect()`
 
-The `WiFiInterface` parent class requires us to implement [two methods for connecting to a WiFi network](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/WiFiInterface.h#L63-L83).
+We explained earlier that a WiFi connection requires an SSID and password. So how can we implement a connect function that doesn't have these as a parameter?
 
-To utilize `nsapi_error_t connect()` we must have stored the SSID and password credentials for the network we want to connect to. For this, `WiFiInterface` requires that we implement [`set_credentials`](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/WiFiInterface.h#L46-L47).
+You might have noticed that one of the WiFiInterface pure virtual functions is `set_credentials(const char *ssid, const char *pass, nsapi_security_t security)`. So, we implemented `set_credentials` to store the SSID and password in private class variables. So, when we call `connect()` with no SSID and password, it is assumed that `set_credentials` has been called. 
 
-The implementation of the connect method with SSID and password parameters is as follows:
+Let's think about how we might implement this of the `connect()` method. 
 
+This is the first method that will need to interact with the WiFi chip. We will need to do some configuration to get the chip in a state where we can open sockets, etc. We will need to send some [AT commands](https://www.espressif.com/sites/default/files/documentation/4a-esp8266_at_instruction_set_en.pdf) to the chip to accomplish this.
+
+The AT commands we want to send are:
+
+1. `AT+CWMODE=3` - This sets the WiFi mode of the chip to 'station mode' and 'SoftAP mode', where it acts as a client connection to a WiFi network, as well as a WiFi access point.
+2. `AT+CIPMUX=1` - This allows the chip to have multiple socket connections open at once
+3. `AT+CWDHCP=1,1` - To enable DHCP
+4. `AT+CWJAP=[ssid,password]` - To connect to the network
+5. `AT+CIFSR` - To query our IP address, and ensure that the network assigned us one through DHCP
+
+#### Sending AT Commands 
+
+We've created an [AT command parser](https://github.com/ARMmbed/ATParser) to easily send AT commands and parse their responses. The AT command parser operates with a `BufferedSerial` object that provides software buffers and interrupt driven TX and RX for Serial.
+
+`ESP8266Interface` utilizes an underlying interface called [`ESP8266`](https://github.com/ARMmbed/esp8266-driver/tree/master/ESP8266) to handle the communication with the WiFi modem. `ESP8266` maintains an instance of AT command parser to handle communcation with the module. We have stored an instance of `ESP8266` in a private `ESP8266Interface` class variable `_esp`. In turn, `ESP8266` maintains an instance of AT command parser called `_parser`.
+
+To send AT commands 1-2, we've made an `ESP8266` method called [`startup(int mode)`](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266/ESP8266.cpp#L27). We will use the AT command parser's [`send`](https://github.com/ARMmbed/ATParser/blob/master/ATParser.h#L132) and [`recv`](https://github.com/ARMmbed/ATParser/blob/master/ATParser.h#L149) functions to accomplish this.
+
+The necessary code is:
 ```C++
-int ESP8266Interface::connect(const char *ssid, const char *pass, nsapi_security_t security,
-                                        uint8_t channel)
-{
-    if (channel != 0) {
-        return NSAPI_ERROR_UNSUPPORTED;
-    }
 
-    set_credentials(ssid, pass, security);
-    return connect();
-}
+bool ESP8266::startup(int mode)
+{
+    ...
+
+    bool success =
+        && _parser.send("AT+CWMODE=%d", mode)
+        && _parser.recv("OK")
+        && _parser.send("AT+CIPMUX=1")
+        && _parser.recv("OK");
+
+    ...
+
 ```
 
-The method that actually performs some communication with the WiFi module is as follows:
+The parser's `send` function returns true if the command was succesully sent to the WiFi chip. The `recv` function returns true if we receive the specified text. In the code example above, our success is determined by sending two commands and receiving the expected `OK` responses. 
+
+#### Return values
+
+So far, our connect method looks something like:
 
 ```C++
 int ESP8266Interface::connect()
 {
-    _esp.setTimeout(ESP8266_CONNECT_TIMEOUT);
-
     if (!_esp.startup(3)) {
-        return NSAPI_ERROR_DEVICE_ERROR;
-    }
+        return X;
 
-    if (!_esp.dhcp(true, 1)) {
-        return NSAPI_ERROR_DHCP_FAILURE;
-    }
-
-    if (!_esp.connect(ap_ssid, ap_pass)) {
-        return NSAPI_ERROR_NO_CONNECTION;
-    }
-
-    if (!_esp.getIPAddress()) {
-        return NSAPI_ERROR_DHCP_FAILURE;
-    }
-
-    return NSAPI_ERROR_OK;
-}
 ```
 
-Let's step into this line `!_esp.connect(ap_ssid, ap_pass)`:
+What should we do if this `!_esp.startup(3)` evaluates to true? If it does, something went wrong when configuring the chip. So, we should return an error code. 
 
-```C++
-bool ESP8266::connect(const char *ap, const char *passPhrase)
-{
-    return _parser.send("AT+CWJAP=\"%s\",\"%s\"", ap, passPhrase)
-        && _parser.recv("OK");
-}
-```
+The NSAPI provides a set of error code return values for network operations. They are documented [here](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/nsapi_types.h#L37-L54).
 
-Here, the interface uses the AT command parser to send the correct command for connecting to a network. In this case, `AT+CWJAP=[ssid],[password]`. The AT command spec for this module specifies an `OK` response if the module successfully connects to the network. If the command is unsuccesfull, the logic dictates that the `connect()` method returns  `NSAPI_ERROR_NO_CONNECTION`. View the [documentation of Network errors](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/nsapi_types.h#L37-L54) to determine the correct network error to return.
+Looking through them, the most appropriate seems to be ` NSAPI_ERROR_DEVICE_ERROR  = -3012,     /*!< failure interfacing with the network processor */`. So let's replace `X` in our `return` statement with `NSAPI_ERROR_DEVICE_ERROR`.
+
+#### Finishing up 
+
+We implemented similar methods to `startup` in ESP8266 to send AT commands 3-5. Then we used them to determine the success of the `connect()` method. The completed implementation can be found [here](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266Interface.cpp#L47-L68).  
+
 
 ### Implementing `socket_connect`
 
@@ -209,7 +220,7 @@ bool ESP8266::open(const char *type, int id, const char* addr, int port)
 }
 ```
 
-In this instance, we use the AT command parser to send `AT+CIPSTART=[id],[TCP or UDP], [address]` to the module. We expect to receive a response of `OK` We only return true if we succesfully send the command AND receive an `OK` response. 
+In this instance, we use the AT command parser to send `AT+CIPSTART=[id],[TCP or UDP], [address]` to the module. We expect to receive a response of `OK`. We only return true if we succesfully send the command AND receive an `OK` response. 
 
 
 
