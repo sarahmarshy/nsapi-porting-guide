@@ -24,7 +24,11 @@ Each subclass has distinct pure virtual methods. Visit their class references (l
 
 `NetworkStack` provides a common interface that hardware shares. It can connect to a network over IP. By implementing the `NetworkStack`, you can use a class as a target for instantiating network sockets.
 
-`NetworkStack` provides [these functions](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/classNetworkStack.html). Look for the function signature like this: [`declarator virt-specifier(optional) = 0`](http://en.cppreference.com/w/cpp/language/abstract_class) to determine which functions ar pure virtual, and must be overriden in your child class.		
+`NetworkStack` provides [these functions](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/classNetworkStack.html). Look for the function signature like this: [`declarator virt-specifier(optional) = 0`](http://en.cppreference.com/w/cpp/language/abstract_class) to determine which functions ar pure virtual, and must be overriden in your child class.	
+
+### Errors
+
+Many functions of `NetworkStack` and `NetworkInterface` return types' are `nsapi_error_t`, which is a type used to represent error codes. A list of these return codes can be seen [here](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/group__netsocket.html#gac21eb8156cf9af198349069cdc7afeba). The integer values the error macros can be viewed in [this file](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/nsapi_types.h). A negative error code indicates failure, while 0 indicates success. 
 
 
 ### The `connect()` method
@@ -154,9 +158,9 @@ int ESP8266Interface::connect()
 
 If this `!_esp.startup(3)` evaluates to true, something went wrong when configuring the chip, so you should return an error code.
 
-The NSAPI provides a set of error code return values for network operations. Their documentation is [here](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/nsapi_types.h#L37-L54).
+The NSAPI provides a set of error code return values for network operations. Their documentation is [here](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/group__netsocket.html#gac21eb8156cf9af198349069cdc7afeba).
 
-Of them, the most appropriate is ` NSAPI_ERROR_DEVICE_ERROR  = -3012,     /*!< failure interfacing with the network processor */`. So let's replace `X` in our `return` statement with `NSAPI_ERROR_DEVICE_ERROR`.
+Of them, the most appropriate is `NSAPI_ERROR_DEVICE_ERROR`. So let's replace `X` in our `return` statement with `NSAPI_ERROR_DEVICE_ERROR`.
 
 #### Finishing up
 
