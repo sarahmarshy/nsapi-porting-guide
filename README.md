@@ -24,7 +24,8 @@ Each subclass has distinct pure virtual methods. Visit their class references (l
 
 `NetworkStack` provides a common interface that hardware shares. It can connect to a network over IP. By implementing the `NetworkStack`, you can use a class as a target for instantiating network sockets.
 
-`NetworkStack` provides [these methods](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/classNetworkStack.html). 
+`NetworkStack` provides [these functions](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/classNetworkStack.html). Look for the function signature like this: [`declarator virt-specifier(optional) = 0`](http://en.cppreference.com/w/cpp/language/abstract_class) to determine which functions ar pure virtual, and must be overriden in your child class.		
+
 
 ### The `connect()` method
 
