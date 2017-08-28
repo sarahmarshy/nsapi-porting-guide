@@ -28,7 +28,7 @@ Each subclass has distinct pure virtual methods. Visit their class references (l
 
 ### Errors
 
-Many functions of `NetworkStack` and `NetworkInterface` return types' are `nsapi_error_t`, which is a type used to represent error codes. A list of these return codes can be seen [here](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/group__netsocket.html#gac21eb8156cf9af198349069cdc7afeba). The integer values the error macros can be viewed in [this file](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/nsapi_types.h). A negative error code indicates failure, while 0 indicates success. 
+Many functions of `NetworkStack` and `NetworkInterface` have return types of `nsapi_error_t`, which is a type used to represent error codes. A list of these return codes can be seen [here](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/group__netsocket.html#gac21eb8156cf9af198349069cdc7afeba). The integer values the error macros can be viewed in [this file](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/nsapi_types.h). A negative error code indicates failure, while 0 indicates success. 
 
 
 ### The `connect()` method
