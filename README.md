@@ -24,11 +24,11 @@ Each subclass has distinct pure virtual methods. Visit their class references (l
 
 `NetworkStack` provides a common interface that hardware shares. It can connect to a network over IP. By implementing the `NetworkStack`, you can use a class as a target for instantiating network sockets.
 
-`NetworkStack` provides [these functions](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/classNetworkStack.html). Look for the function signature like this: [`declarator virt-specifier(optional) = 0`](http://en.cppreference.com/w/cpp/language/abstract_class) to determine which functions ar pure virtual, and must be overriden in your child class.	
+`NetworkStack` provides [these functions](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/classNetworkStack.html). Look for the function signature like this: [`declarator virt-specifier(optional) = 0`](http://en.cppreference.com/w/cpp/language/abstract_class) to determine which functions are pure virtual, and must be overridden in your child class.
 
 ### Errors
 
-Many functions of `NetworkStack` and `NetworkInterface` have return types of `nsapi_error_t`, which is a type used to represent error codes. A list of these return codes can be seen [here](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/group__netsocket.html#gac21eb8156cf9af198349069cdc7afeba). The integer values the error macros can be viewed in [this file](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/nsapi_types.h). A negative error code indicates failure, while 0 indicates success. 
+Many functions of `NetworkStack` and `NetworkInterface` have return types of `nsapi_error_t`, which is a type used to represent error codes. A list of these return codes can be seen [here](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/group__netsocket.html#gac21eb8156cf9af198349069cdc7afeba). The integer values the error macros can be viewed in [this file](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/nsapi_types.h). A negative error code indicates failure, while 0 indicates success.
 
 
 ### The `connect()` method
@@ -80,7 +80,7 @@ To:
 
 ### Testing
 
-When adding a new connectivity class, you can use `mbed test` to verify your implentation.
+When adding a new connectivity class, you can use `mbed test` to verify your implementation.
 
 Make a new mbed OS project: `mbed new [directory_name]`, where directory name is the name you'd like to use as your testing directory.
 
@@ -121,7 +121,7 @@ You'll need to create a JSON test configuration file. The format is as follows.
 
 The config values you need to replace are `header-file`, `object-construction`, and `connect-statement`.
 
-* `header-file` - Replace `EthernetInterface.h` with the correct header file of your class 
+* `header-file` - Replace `EthernetInterface.h` with the correct header file of your class
 * `object-construction` - Replace `EthernetInterface()` with the syntax for your class' object construction.
 * `connect-statement` - Replace `EthernetInterface*` with a pointer type to your class and `connect()` to match your class' connect function signature.
 
@@ -130,7 +130,7 @@ Save the content as a new JSON file.
 Run the following command to execute the tests:
 `mbed test -m [MCU] -t [toolchain] -n mbed-os-tests-netsocket* --test-config path/to/config.json`
 
-Use `-vv` for very verbose to view detailed test output. 
+Use `-vv` for very verbose to view detailed test output.
 
 
 ## Case study: ESP8266 Wi-Fi component
@@ -468,8 +468,3 @@ mbedgt: test case report:
 mbedgt: test case results: 22 OK
 mbedgt: completed in 217.24 sec
 ```
-
-
-
-
-
