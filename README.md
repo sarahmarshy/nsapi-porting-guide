@@ -14,9 +14,9 @@ The current `NetworkInterface` subclasses are [`CellularInterface`](https://docs
 
 There are three [pure virtual methods](https://en.wikipedia.org/wiki/Virtual_function#Abstract_classes_and_pure_virtual_functions) in the `NetworkInterface` class.
 
-* [`connect()`](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkInterface.h#L99) - to connect the interface to the network.
-* [`disconnect()`](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkInterface.h#L105) - to disconnect the interface from the network.
-* [`get_stack()`](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkInterface.h#L144) - to return the underlying NetworkStack object.
+* [`connect()`](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/classNetworkInterface.html#aa7ef54ecbd066f2083e6031bd1f3cb00) - to connect the interface to the network.
+* [`disconnect()`](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/classNetworkInterface.html#a1a0b6a1cc662ae2483d9cb58e34671a6) - to disconnect the interface from the network.
+* [`get_stack()`](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/classNetworkInterface.html#a965f268a97414761bff9e7013434b023) - to return the underlying NetworkStack object.
 
 Each subclass has distinct pure virtual methods. Visit their class references (linked above) to determine those you must implement.
 
@@ -24,18 +24,7 @@ Each subclass has distinct pure virtual methods. Visit their class references (l
 
 `NetworkStack` provides a common interface that hardware shares. It can connect to a network over IP. By implementing the `NetworkStack`, you can use a class as a target for instantiating network sockets.
 
-`NetworkStack` requires that you implement the following functionalities:
-
-* [Getting an IP address from the network](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkStack.h#L45).
-* [Opening a socket](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkStack.h#L120).
-* [Closing a socket](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkStack.h#L130).
-* [Accepting connections on a socket](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkStack.h#L184).
-* [Attaching a callback to a state change of a socket](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkStack.h#L270).
-* [Binding an address to a socket](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkStack.h#L141).
-* [Connecting a socket to a remote host](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkStack.h#L164).
-* [Listening for incoming connections](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkStack.h#L153).
-* [Receiving data on a socket](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkStack.h#L218).
-* [Sending data on a socket](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkStack.h#L201).
+`NetworkStack` provides [these methods](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/classNetworkStack.html). 
 
 ### The `connect()` method
 
@@ -89,7 +78,7 @@ Look at how to port a driver for the ESP8266 Wi-Fi module to the NSAPI.
 
 ### Required methods
 
-Because ESP8266 is a Wi-Fi component, choose [`WiFiInterface`](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/WiFiInterface.h) as our `NetworkworkInterface` parent class.
+Because ESP8266 is a Wi-Fi component, choose [`WiFiInterface`](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/classWiFiInterface.html) as our `NetworkworkInterface` parent class.
 
 `WiFiInterface` defines the following pure virtual functions:
 1. `set_credentials(const char *ssid, const char *pass, nsapi_security_t security)`
@@ -102,7 +91,7 @@ Because ESP8266 is a Wi-Fi component, choose [`WiFiInterface`](https://github.co
 
 Additionally, `WiFiInterface` parent class `NetworkInterface` introduces `NetworkStack *get_stack()` as a pure virtual function.
 
-You must also use [`NetworkStack`](https://github.com/ARMmbed/mbed-os/blob/master/features/netsocket/NetworkStack.h) as a parent class of our interface. You've already explored the pure virtual methods [here](#NetworkStack-class).
+You must also use [`NetworkStack`](https://docs.mbed.com/docs/mbed-os-api/en/mbed-os-5.4/api/classNetworkStack.html) as a parent class of our interface. You've already explored the pure virtual methods [here](#NetworkStack-class).
 
 ### Implementing `connect()`
 
@@ -237,7 +226,7 @@ int ESP8266Interface::socket_open(void **handle, nsapi_protocol_t proto)
     return 0; // success
 ```
 
-See the full implementation [here](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266Interface.cpp#L137-L164).
+See the full implementation [here](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266Interface.cpp).
 
 ### Implementing `socket_connect`
 
