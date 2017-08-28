@@ -78,6 +78,60 @@ To:
     int return_code = net.connect("my_ssid", "my_password");
 ```
 
+### Testing
+
+When adding a new connectivity class, you can use `mbed test` to verify your implentation.
+
+Make a new mbed OS project: `mbed new [directory_name]`, where directory name is the name you'd like to use as your testing directory.
+
+Move into that folder: `cd [directory_name]`
+
+Add your library to the project: `mbed add [driver URL]` or copy the driver files to this directory.
+
+You'll need to create a JSON test configuration file. The format is as follows.
+```JSON
+{
+    "config": {
+        "header-file": {
+            "help" : "String for including your driver header file",
+            "value" : "\"EthernetInterface.h\""
+        },
+        "object-construction" : {
+            "value" : "new EthernetInterface()"
+        },
+        "connect-statement" : {
+            "help" : "Must use 'net' variable name",
+            "value" : "((EthernetInterface *)net)->connect()"
+        },
+        "echo-server-addr" : {
+            "help" : "IP address of echo server",
+            "value" : "\"195.34.89.241\""
+        },
+        "echo-server-port" : {
+            "help" : "Port of echo server",
+            "value" : "7"
+        },
+        "tcp-echo-prefix" : {
+            "help" : "Some servers send a prefix before echoed message",
+            "value" : "\"u-blox AG TCP/UDP test service\\n\""
+        }
+    }
+}
+```
+
+The config values you need to replace are `header-file`, `object-construction`, and `connect-statement`.
+
+* `header-file` - Replace `EthernetInterface.h` with the correct header file of your class 
+* `object-construction` - Replace `EthernetInterface()` with the syntax for your class' object construction.
+* `connect-statement` - Replace `EthernetInterface*` with a pointer type to your class and `connect()` to match your class' connect function signature.
+
+Save the content as a new JSON file.
+
+Run the following command to execute the tests:
+`mbed test -m [MCU] -t [toolchain] -n mbed-os-tests-netsocket* --test-config path/to/config.json`
+
+Use `-vv` for very verbose to view detailed test output. 
+
 
 ## Case study: ESP8266 Wi-Fi component
 
