@@ -385,3 +385,91 @@ void ESP8266Interface::event() {
 So, look for sockets that have callbacks; then, call them with the specified data!
 
 Know when to trigger these events. You've used the `ESP8266` class object, `_esp`, to attach a callback on a Serial RX event like so: `_esp.attach(this, &ESP8266Interface::event)`. The `_esp` attach function creates ` _serial.attach(func)`, which attaches the function to the underlying `BufferedSerial` RX event. Whenever the radio receives something, consider that a state change, and invoke any attach callbacks. A common use case is to attach `socket_recv` to a socket, so the socket can receive data asynchronously without blocking.
+
+### Testing
+
+* Make a new mbed project - `mbed new esp8266-driver-test`
+* Move into project folder - `cd esp8266-driver-test`
+* Add esp8266 driver - `mbed add esp8266-driver`
+* Make a configuration file called `esp8266_config.json` with the following contents:
+```
+{
+    "config": {
+        "header-file": {
+            "help" : "String for including your driver header file",
+            "value" : "\"ESP8266Interface.h\""
+        },
+        "object-construction" : {
+            "value" : "new ESP8266Interface(D1, D0)"
+        },
+        "connect-statement" : {
+            "help" : "Must use 'net' variable name",
+            "value" : "((ESP8266Interface *)net)->connect(\"my_ssid\", \"my_password\")"
+        },
+        "echo-server-addr" : {
+            "help" : "IP address of echo server",
+            "value" : "\"195.34.89.241\""
+        },
+        "echo-server-port" : {
+            "help" : "Port of echo server",
+            "value" : "7"
+        },
+        "tcp-echo-prefix" : {
+            "help" : "Some servers send a prefix before echoed message",
+            "value" : "\"u-blox AG TCP/UDP test service\\n\""
+        }
+    }
+}
+```
+* Run tests - `mbed test -m [mcu] -t [toolchain] -n mbed-os-tests-netsocket* --test-config esp8266_config.json`
+* View test results:
+```shell
+mbedgt: test suite report:
++--------------+---------------+--------------------------------------------+--------+--------------------+-------------+
+| target       | platform_name | test suite                                 | result | elapsed_time (sec) | copy_method |
++--------------+---------------+--------------------------------------------+--------+--------------------+-------------+
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-connectivity       | OK     | 32.24              | shell       |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-gethostbyname      | OK     | 24.01              | shell       |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-ip_parsing         | OK     | 14.31              | shell       |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-socket_sigio       | OK     | 29.23              | shell       |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-tcp_echo           | OK     | 51.39              | shell       |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-tcp_hello_world    | OK     | 21.03              | shell       |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-udp_dtls_handshake | OK     | 19.65              | shell       |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-udp_echo           | OK     | 23.22              | shell       |
++--------------+---------------+--------------------------------------------+--------+--------------------+-------------+
+mbedgt: test suite results: 8 OK
+mbedgt: test case report:
++--------------+---------------+--------------------------------------------+----------------------------------------+--------+--------+--------+--------------------+
+| target       | platform_name | test suite                                 | test case                              | passed | failed | result | elapsed_time (sec) |
++--------------+---------------+--------------------------------------------+----------------------------------------+--------+--------+--------+--------------------+
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-connectivity       | Bringing the network up and down       | 1      | 0      | OK     | 7.61               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-connectivity       | Bringing the network up and down twice | 1      | 0      | OK     | 10.74              |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-gethostbyname      | DNS literal                            | 1      | 0      | OK     | 0.09               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-gethostbyname      | DNS preference literal                 | 1      | 0      | OK     | 0.1                |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-gethostbyname      | DNS preference query                   | 1      | 0      | OK     | 0.13               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-gethostbyname      | DNS query                              | 1      | 0      | OK     | 0.15               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-ip_parsing         | Hollowed IPv6 address                  | 1      | 0      | OK     | 0.06               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-ip_parsing         | Left-weighted IPv4 address             | 1      | 0      | OK     | 0.07               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-ip_parsing         | Left-weighted IPv6 address             | 1      | 0      | OK     | 0.06               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-ip_parsing         | Null IPv4 address                      | 1      | 0      | OK     | 0.04               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-ip_parsing         | Null IPv6 address                      | 1      | 0      | OK     | 0.05               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-ip_parsing         | Right-weighted IPv4 address            | 1      | 0      | OK     | 0.06               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-ip_parsing         | Right-weighted IPv6 address            | 1      | 0      | OK     | 0.06               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-ip_parsing         | Simple IPv4 address                    | 1      | 0      | OK     | 0.05               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-ip_parsing         | Simple IPv6 address                    | 1      | 0      | OK     | 0.04               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-socket_sigio       | Socket Attach Test                     | 1      | 0      | OK     | 2.04               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-socket_sigio       | Socket Detach Test                     | 1      | 0      | OK     | 6.26               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-socket_sigio       | Socket Reattach Test                   | 1      | 0      | OK     | 1.36               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-tcp_echo           | TCP echo                               | 1      | 0      | OK     | 6.24               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-tcp_hello_world    | TCP hello world                        | 1      | 0      | OK     | 7.34               |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-udp_dtls_handshake | UDP DTLS handshake                     | 1      | 0      | OK     | 5.9                |
+| K64F-GCC_ARM | K64F          | mbed-os-tests-netsocket-udp_echo           | UDP echo                               | 1      | 0      | OK     | 9.75               |
++--------------+---------------+--------------------------------------------+----------------------------------------+--------+--------+--------+--------------------+
+mbedgt: test case results: 22 OK
+mbedgt: completed in 217.24 sec
+```
+
+
+
+
+
