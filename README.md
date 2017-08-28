@@ -33,7 +33,7 @@ Many functions of `NetworkStack` and `NetworkInterface` return types' are `nsapi
 
 ### The `connect()` method
 
-High level API calls to an implementation of a network-socket API are **identical** across networking protocols. The only difference is the method through which you connect to the network. For example, a Wi-Fi connection requires an SSID and password, a cellular connection requires an APN and Ethernet doesn't require any credentials. Only the `connect` method syntax of the derived classes reflects these differences. The intended design allows the user to change out the connectivity of the app by adding a new library and changing the API call for connecting to the network.
+High level API calls to an implementation of a network-socket API are **identical** across networking protocols. The only difference is the interface object constructor and the method through which you connect to the network. For example, a Wi-Fi connection requires an SSID and password, a cellular connection requires an APN and Ethernet doesn't require any credentials. Only the `connect` method syntax of the derived classes reflects these differences. The intended design allows the user to change out the connectivity of the app by adding a new library and changing the API call for connecting to the network.
 
 Below is a demonstration with the code that sends an HTTP request over Ethernet:
 
@@ -74,7 +74,7 @@ To change the connectivity to ESP8266 Wi-Fi, change these lines:
 To:
 
 ```C++
-    ESP8266Interface net;
+    ESP8266Interface net(TX_PIN, RX_PIN);
     int return_code = net.connect("my_ssid", "my_password");
 ```
 
