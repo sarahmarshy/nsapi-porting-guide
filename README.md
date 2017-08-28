@@ -39,7 +39,9 @@ Below is a demonstration with the code that sends an HTTP request over Ethernet:
 
 ```C++
     EthernetInterface net;
-    net.connect();
+    int return_code = net.connect();
+    if (return_code < 0)
+        printf("Error connecting to network %d\r\n", return_code);
 
     // Open a socket on the network interface, and create a TCP connection to api.ipify.org
     TCPSocket socket;
@@ -66,14 +68,14 @@ To change the connectivity to ESP8266 Wi-Fi, change these lines:
 
 ```C++
     EthernetInterface net;
-    net.connect();
+    int return_code = net.connect();
 ```
 
 To:
 
 ```C++
     ESP8266Interface net;
-    net.connect("my_ssid", "my_password");
+    int return_code = net.connect("my_ssid", "my_password");
 ```
 
 
