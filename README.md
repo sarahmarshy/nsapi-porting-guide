@@ -174,11 +174,11 @@ The AT commands you want to send are:
 
 #### Sending AT commands
 
-With this [AT command parser](https://github.com/ARMmbed/ATParser), you can send AT commands and parse their responses. The AT command parser operates with a `BufferedSerial` object that provides software buffers and interrupt driven TX and RX for Serial.
+With this [AT command parser](https://github.com/ARMmbed/mbed-os/tree/master/platform), you can send AT commands and parse their responses. The AT command parser operates with a `UARTSerial` object that provides software buffers and interrupt driven TX and RX for Serial.
 
 `ESP8266Interface` uses an underlying interface called [`ESP8266`](https://github.com/ARMmbed/esp8266-driver/tree/master/ESP8266) to handle the communication with the Wi-Fi modem. `ESP8266` maintains an instance of AT command parser to handle communication with the module. We have stored an instance of `ESP8266` in a private `ESP8266Interface` class variable `_esp`. In turn, `ESP8266` maintains an instance of AT command parser called `_parser`.
 
-To send AT commands 1-2, we've made an `ESP8266` method called [`startup(int mode)`](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266/ESP8266.cpp#L27). Use the AT command parser's [`send`](https://github.com/ARMmbed/ATParser/blob/master/ATParser.h#L132) and [`recv`](https://github.com/ARMmbed/ATParser/blob/master/ATParser.h#L149) functions to accomplish this.
+To send AT commands 1-2, we've made an `ESP8266` method called [`startup(int mode)`](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266/ESP8266.cpp#L27). Use the AT command parser's [`send`](https://github.com/ARMmbed/mbed-os/blob/master/platform/ATCmdParser.h#L191) and [`recv`](https://github.com/ARMmbed/mbed-os/blob/master/platform/ATCmdParser.h#L209) functions to accomplish this.
 
 The necessary code is:
 
@@ -384,7 +384,7 @@ void ESP8266Interface::event() {
 
 So, look for sockets that have callbacks; then, call them with the specified data!
 
-Know when to trigger these events. You've used the `ESP8266` class object, `_esp`, to attach a callback on a Serial RX event like so: `_esp.attach(this, &ESP8266Interface::event)`. The `_esp` attach function creates ` _serial.attach(func)`, which attaches the function to the underlying `BufferedSerial` RX event. Whenever the radio receives something, consider that a state change, and invoke any attach callbacks. A common use case is to attach `socket_recv` to a socket, so the socket can receive data asynchronously without blocking.
+Know when to trigger these events. You've used the `ESP8266` class object, `_esp`, to attach a callback on a Serial RX event like so: `_esp.attach(this, &ESP8266Interface::event)`. The `_esp` attach function creates ` _serial.attach(func)`, which attaches the function to the underlying `UARTSerial` RX event. Whenever the radio receives something, consider that a state change, and invoke any attach callbacks. A common use case is to attach `socket_recv` to a socket, so the socket can receive data asynchronously without blocking.
 
 ### Testing
 
